@@ -11,7 +11,7 @@ Write a Go program to query the API provided by the amazon-wishlist-project that
 
 1. Build amazon-wish-lister docker image:
 ```
-docker build -t amazon-wish-lister --file amazon-wish-lister_docker/amazon-wish-lister-Dockerfile amazon-wish-lister_docker/
+docker build -t amazon-wish-lister --file amazon-wish-lister_docker/Dockerfile amazon-wish-lister_docker/
 ```
 2. Build scraper docker image:
 ```
