@@ -3,18 +3,6 @@ version: '3.1'
 
 services:
 
-  db:
-    image: postgres:10
-    restart: always
-    environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-
-  adminer:
-    image: adminer
-    restart: always
-    ports:
-      - 8081:8080
-
   amazon-wish-lister:
     image: amazon-wish-lister
     restart: always
