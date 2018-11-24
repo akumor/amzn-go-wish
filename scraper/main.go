@@ -2,11 +2,13 @@
 package main
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -37,6 +39,17 @@ func main() {
 
 	// Get the first command line argument for the ID
 	id := os.Args[1]
+
+	// Create CSV file
+	file, err := os.Create(os.Args[2])
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	// Create CSV writer
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
 
 	// Display the value.
 	fmt.Printf("Goroutine wishlistFetch ID %s\n", id)
@@ -91,6 +104,11 @@ func main() {
 	// when done reading from it
 	resp.Body.Close()
 
+	// Create slice of slices for writing to CSV
+	records := [][]string{
+		{"Num", "Name", "Link", "OldPrice", "NewPrice", "DateAdded", "Priority", "Rating", "TotalRatings", "Comment", "Picture", "Page", "ASIN", "LargeSslImage", "AffiliateURL"},
+	}
+
 	// Print contents of the wishlist
 	for _, item := range currentWishlist {
 		fmt.Print("##########################################\n")
@@ -110,6 +128,15 @@ func main() {
 		fmt.Printf("LargeSslImage: %s\n", item.LargeSslImage)
 		fmt.Printf("AffiliateURL: %s\n", item.AffiliateURL)
 		fmt.Print("##########################################\n")
+		line := []string{
+			strconv.Itoa(item.Num), item.Name, item.Link, item.OldPrice, item.NewPrice, item.DateAdded, item.Priority, item.Rating, item.TotalRatings, item.Comment, item.Picture, strconv.Itoa(item.Page), item.ASIN, item.LargeSslImage, item.AffiliateURL,
+		}
+		records = append(records, line)
+	}
+
+	err = writer.WriteAll(records)
+	if err != nil {
+		log.Println(err)
 	}
 
 	fmt.Printf("%.2fs elapsed\n", time.Since(start).Seconds())
