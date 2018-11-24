@@ -2,7 +2,8 @@ FROM fedora:latest as downloader
 WORKDIR /root
 RUN dnf -y install git && \
     dnf clean all && \
-    git clone https://github.com/doitlikejustin/amazon-wish-lister.git
+    git clone https://github.com/akumor/amazon-wish-lister.git
+#    git clone https://github.com/doitlikejustin/amazon-wish-lister.git
 
 RUN ls
 
