@@ -7,144 +7,110 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"sync"
 	"time"
 )
 
 // Wishlist is a slice of wishlist items.
-type Wishlist struct {
-	items []struct {
-		num           int    `json:"num"`
-		name          string `json:"name"`
-		link          string `json:"link"`
-		oldPrice      string `json:"old-price"`
-		newPrice      string `json:"new-price"`
-		dateAdded     string `json:"date-added"`
-		priority      string `json:"priority"`
-		rating        string `json:"rating"`
-		totalRatings  string `json:"total-ratings"`
-		comment       string `json:"comment"`
-		picture       string `json:"picture"`
-		page          int    `json:"page"`
-		ASIN          string `json:"ASIN"`
-		largeSSLimage string `json:"large-ssl-image"`
-		affiliateURL  string `json:"affiliate-url"`
-	}
+type Wishlist []struct {
+	Num           int    `json:"num"`
+	Name          string `json:"name"`
+	Link          string `json:"link"`
+	OldPrice      string `json:"old-price"`
+	NewPrice      string `json:"new-price"`
+	DateAdded     string `json:"date-added"`
+	Priority      string `json:"priority"`
+	Rating        string `json:"rating"`
+	TotalRatings  string `json:"total-ratings"`
+	Comment       string `json:"comment"`
+	Picture       string `json:"picture"`
+	Page          int    `json:"page"`
+	ASIN          string `json:"ASIN"`
+	LargeSslImage string `json:"large-ssl-image"`
+	AffiliateURL  string `json:"affiliate-url"`
 }
 
 func main() {
-	start := time.Now()
-	IDCh := make(chan string)
-	itemsCh := make(chan Wishlist)
-	var wg sync.WaitGroup
-	wg.Add(2)
-	go func() {
-		wishlistFetch(IDCh, itemsCh) // start a goroutine for getting wishlists and putting items into a channel
-		wg.Done()
-	}()
-	go func() {
-		storeWishlistItems(itemsCh) // start a goroutine for storing wishlist items
-		wg.Done()
-	}()
-	for _, amznID := range os.Args[1:] {
-		IDCh <- amznID
-	}
-	close(IDCh)
-	wg.Wait()
-	fmt.Printf("%.2fs elapsed\n", time.Since(start).Seconds())
-}
-
-func wishlistFetch(IDCh chan string, itemsCh chan Wishlist) {
 	var currentWishlist Wishlist
 	var wishlistURL string
 
-	// Loop over wishlist channel
-	for {
-		// TODO: Insert random delay greater than 1 second
+	start := time.Now()
 
-		// Wait to receive a value
-		id, ok := <-IDCh
+	// Get the first command line argument for the ID
+	id := os.Args[1]
 
-		if !ok {
-			// If the channel was closed, return.
-			close(itemsCh)
-			fmt.Printf("Goroutine wishlistFetch Down\n")
-			return
-		}
+	// Display the value.
+	fmt.Printf("Goroutine wishlistFetch ID %s\n", id)
 
-		// Display the value.
-		fmt.Printf("Goroutine wishlistFetch ID %s\n", id)
+	// Build URL to query
+	wishlistURL = fmt.Sprintf("http://192.168.0.150:8080/wishlist.php?id=%s&reveal=all&sort=priority&format=json", id)
 
-		// Build URL to query
-		wishlistURL = fmt.Sprintf("http://192.168.0.150:8080/wishlist.php?id=%s&reveal=all&sort=priority&format=json", id)
+	//DEBUG
+	fmt.Printf("DEBUG wishlistURL: %s\n", wishlistURL)
 
-		//DEBUG
-		fmt.Printf("DEBUG wishlistURL: %s\n", wishlistURL)
+	//For control over proxies,
+	//TLS configuration, keep-alives,
+	//compression, and other settings, create a Transport
+	tr := &http.Transport{
+		MaxIdleConns:       10,
+		IdleConnTimeout:    30 * time.Second,
+		DisableCompression: true,
+	}
 
-		// TODO: query amazon-wish-lister for JSON
+	//DEBUG
+	fmt.Printf("DEBUG AFTER CREATING TRANSPORT\n")
 
-		//For control over proxies,
-		//TLS configuration, keep-alives,
-		//compression, and other settings, create a Transport
-		tr := &http.Transport{
-			MaxIdleConns:       10,
-			IdleConnTimeout:    30 * time.Second,
-			DisableCompression: true,
-		}
+	// For control over HTTP client headers,
+	// redirect policy, and other settings,
+	// create a Client
+	// A Client is an HTTP client
+	client := &http.Client{Transport: tr}
 
-		//DEBUG
-		fmt.Printf("DEBUG AFTER CREATING TRANSPORT\n")
+	//DEBUG
+	fmt.Printf("DEBUG AFTER CREATING CLIENT\n")
 
-		// For control over HTTP client headers,
-		// redirect policy, and other settings,
-		// create a Client
-		// A Client is an HTTP client
-		client := &http.Client{Transport: tr}
+	// Send the request via a client
+	// Do sends an HTTP request and
+	// returns an HTTP response
+	resp, err := client.Get(wishlistURL)
 
-		//DEBUG
-		fmt.Printf("DEBUG AFTER CREATING CLIENT\n")
+	log.Println(resp)
+	log.Println(err)
+	if err != nil {
+		log.Println("client.Get err was not nil!")
+		log.Fatal(err)
+	}
 
-		// Send the request via a client
-		// Do sends an HTTP request and
-		// returns an HTTP response
-		resp, err := client.Get(wishlistURL)
-		log.Println(resp)
+	fmt.Printf("DEBUG AFTER SENDING REQUEST\n")
+
+	// Use json.Decode for reading streams of JSON data
+	if err := json.NewDecoder(resp.Body).Decode(&currentWishlist); err != nil {
 		log.Println(err)
-		if err != nil {
-			log.Println("client.Get err was not nil!")
-			log.Fatal(err)
-		}
-
-		fmt.Printf("DEBUG AFTER SENDING REQUEST\n")
-
-		// Use json.Decode for reading streams of JSON data
-		if err := json.NewDecoder(resp.Body).Decode(&currentWishlist); err != nil {
-			log.Println(err)
-		}
-
-		// Callers should close resp.Body
-		// when done reading from it
-		resp.Body.Close()
-
-		itemsCh <- currentWishlist
 	}
 
-}
+	// Callers should close resp.Body
+	// when done reading from it
+	resp.Body.Close()
 
-func storeWishlistItems(itemCh chan Wishlist) {
-	for {
-		// Wait to receive a value
-		wl, ok := <-itemCh
-
-		if !ok {
-			// If the channel was closed, return.
-			fmt.Printf("Goroutine storeWishlistItems Down\n")
-			return
-		}
-
-		// Display the value.
-		fmt.Printf("Goroutine storeWishlistItems item %s\n", wl.items)
-
-		// TODO: write goroutine to store item in Postgres database
+	// Print contents of the wishlist
+	for _, item := range currentWishlist {
+		fmt.Print("##########################################\n")
+		fmt.Printf("Num: %d\n", item.Num)
+		fmt.Printf("Name: %s\n", item.Name)
+		fmt.Printf("Link: %s\n", item.Link)
+		fmt.Printf("OldPrice: %s\n", item.OldPrice)
+		fmt.Printf("NewPrice: %s\n", item.NewPrice)
+		fmt.Printf("DateAdded: %s\n", item.DateAdded)
+		fmt.Printf("Priority: %s\n", item.Priority)
+		fmt.Printf("Rating: %s\n", item.Rating)
+		fmt.Printf("TotalRatings: %s\n", item.TotalRatings)
+		fmt.Printf("Comment: %s\n", item.Comment)
+		fmt.Printf("Picture: %s\n", item.Picture)
+		fmt.Printf("Page: %d\n", item.Page)
+		fmt.Printf("ASIN: %s\n", item.ASIN)
+		fmt.Printf("LargeSslImage: %s\n", item.LargeSslImage)
+		fmt.Printf("AffiliateURL: %s\n", item.AffiliateURL)
+		fmt.Print("##########################################\n")
 	}
+
+	fmt.Printf("%.2fs elapsed\n", time.Since(start).Seconds())
 }
