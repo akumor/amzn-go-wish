@@ -1,11 +1,5 @@
 # amzn-go-wish
-Repo for working with Amazon wishlist using Go
-
-**not yet working**
-
-## Initial Idea
-
-Write a Go program to query the API provided by the amazon-wishlist-project that will be able to store the data to multiple backends starting with PostgreSQL.
+A Go program to query the API provided by the amazon-wish-lister project that will be able to store the data to a CSV file.
 
 ## Setup
 
@@ -21,6 +15,10 @@ docker build -t akumor/amzn-go-wish/scraper ./scraper/
 ```
 docker-compose -f ./docker-compose.yml
 ```
+
+## Run
+
+`go run main.go -host=localhost -port=8080 -id=XXXXXXXXXXXX -file=output.csv`
 
 ## Resouces
 * amazon-wish-list https://github.com/doitlikejustin/amazon-wish-lister

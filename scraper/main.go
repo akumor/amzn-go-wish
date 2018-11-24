@@ -4,6 +4,7 @@ package main
 import (
 	"encoding/csv"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -37,11 +38,16 @@ func main() {
 
 	start := time.Now()
 
-	// Get the first command line argument for the ID
-	id := os.Args[1]
+	// Define host port id outputfile flags
+	apiHost := flag.String("host", "localhost", "API host to query for the wishlist.")
+	apiPort := flag.String("port", "80", "API port to query for the wishlist.")
+	id := flag.String("id", "DEFAULT", "ID of the Amazon wishlist.")
+	outputFile := flag.String("file", "output.csv", "Path to output CSV file.")
+
+	flag.Parse()
 
 	// Create CSV file
-	file, err := os.Create(os.Args[2])
+	file, err := os.Create(*outputFile)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -52,10 +58,10 @@ func main() {
 	defer writer.Flush()
 
 	// Display the value.
-	fmt.Printf("Goroutine wishlistFetch ID %s\n", id)
+	fmt.Printf("Goroutine wishlistFetch ID %s\n", *id)
 
 	// Build URL to query
-	wishlistURL = fmt.Sprintf("http://192.168.0.150:8080/wishlist.php?id=%s&reveal=all&sort=priority&format=json", id)
+	wishlistURL = fmt.Sprintf("http://%s:%s/wishlist.php?id=%s&reveal=all&sort=priority&format=json", *apiHost, *apiPort, *id)
 
 	//DEBUG
 	fmt.Printf("DEBUG wishlistURL: %s\n", wishlistURL)
